@@ -1,6 +1,16 @@
 /*
 CSS styles for test task
 */
+
+.header__btns {
+    margin-bottom: 1rem;
+}
+
+.friends__block_generated {
+    padding-top: 0.8rem;
+    padding-bottom: 0.8rem;
+}
+
 .friend_block__design {
     background-color: #eff5ff;
     border: 0.1rem solid #5a5c60;
@@ -11,6 +21,7 @@ CSS styles for test task
     -webkit-box-shadow: 0px 0px 10px 0px rgba(50, 50, 50, 0.5);
     -moz-box-shadow:    0px 0px 10px 0px rgba(50, 50, 50, 0.5);
     box-shadow:         0px 0px 10px 0px rgba(50, 50, 50, 0.5);
+    cursor: move;
 }
 
 .friend__fullname {
@@ -20,4 +31,14 @@ CSS styles for test task
 .friend__id {
     font-size: 0.7rem;
     color: #8f9193;
+}
+
+.icon__parent {
+    position: relative;
+}
+
+.icon__child {
+    position: absolute;
+    top: 2rem;
+    cursor: pointer;
 }
