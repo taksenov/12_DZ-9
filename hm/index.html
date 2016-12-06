@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>HomeWork #8 -- VK.api showMyFriends</title>
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <!-- Optional theme -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+    <!-- Custom styles -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <section class="header">
+        <div class="row">
+            <div class="col-md-12 text-center">
+                <h1 id="headerUserFriendsVK">
+                    <!-- header content insert here -->
+                </h1>
+            </div>
+        </div>
+    </section>
+
+<!--     <section class="workspace">
+        <div class="row" >
+            <div class="col-md-12">
+                <!~~ Handlebars injection here ~~>
+                <ul id="listOfDownloadedFriends">
+
+                </ul>
+            </div>
+        </div>
+    </section> -->
+
+    <section class="workspace">
+        <div class="row" >
+            <div class="col-md-5 col-md-offset-1">
+                <!-- Handlebars injection here -->
+                <div class="" id="listOfDownloadedFriends">
+
+                </div>
+            </div>
+            <div class="col-md-6">
+
+            </div>
+        </div>
+    </section>
+
+    <!-- HandlebarsJS Template -->
+    <script type="text/x-handlebars-template" id="allRenderedFriends">
+        {{#each friendslist}}
+            <div class="row friend_block__design">
+                <div class="col-md-2">
+                    <img src="{{photo_50}}" alt="{{last_name}} {{first_name}}">
+                </div>
+                <div class="col-md-10">
+                    <span class="friend__fullname">
+                        {{last_name}} {{first_name}}
+                    </span>
+                     <br>
+                    <span class="friend__birthdate">
+                        {{bdate}}
+                    </span>
+                    <br>
+                    <span class="friend__id">
+                        id: {{id}}
+                    </span>
+                </div>
+            </div>
+        {{/each}}
+    </script>
+
+    <script type"text/javascript" src="https://vk.com/js/api/openapi.js"></script>
+    <!-- HandlebarsJS -->
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.0.6/handlebars.min.js"></script>
+    <!-- CustomJS -->
+    <script type="text/javascript" src="script.js"></script>
+</body>
+</html>
