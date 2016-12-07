@@ -5,16 +5,12 @@
 // - Друзья должны быть отсортированы по дате рождения в порядке убывания.
 // То есть на самом верху списка расположен друг с ближайший датой рождения.
 //
-// - сделать высоту правого блока ( id="listOfMovedFriends"  ) в размер текущего окна
-//
-// - реализовать Drag-n-Drop (уже есть в другших проектах)
-//   можно посмотреть вот тут https://www.html5rocks.com/ru/tutorials/dnd/basics/
-//
-// - реализовать ЖИВОЙ поиск (уже есть в другших проектах)
-//
 // - реализовать возврат обратно в ЛЕВЫЙ список из ПРАВОГО, сделать смену иконки на крестик!
 //
 // - реализовать сохранение и загрузку данных о пользователях и где они лежат записывая все в локалСторадж
+// - нужна функция(и), которая восстанавливает по левому и правому массивам DOM дерево
+// - IDEA возможно нужны еще пара промежуточных массивов, по которым будет происходить живой  поиск
+//   учитывать уже эти массивы, когда нажаты кнопки сохранить, загрузить, на основе ни собирать DOM дерево (но это не точно!)
 //
 // Использование шаблонизатора приветствуется.
 // =============================================================================
@@ -35,8 +31,17 @@
 let vkAppId = 5757533;
 let headerUserFriendsVK = document.getElementById('headerUserFriendsVK');
 let listOfDownloadedFriends = document.getElementById('listOfDownloadedFriends');
+let listOfMovedFriends = document.getElementById('listOfMovedFriends');
 let allRenderedFriends = document.getElementById('allRenderedFriends');
 let VK_ACCESS_FRIENDS = 2;
+let VK_API_VERSION = '5.8';
+let grandArrOfFriendsObj = [];          // главный массив Друзей из ВК
+let tempArrOfFriendsObjLeft = [];          // массив всех Друзей
+let tempArrOfFriendsObjRight = [];         // массив выбранных друзей
+let searchInputLeft = document.getElementById('searchInputLeft');
+let searchInputRight = document.getElementById('searchInputRight');
+let dragSrcEl = null;
+let draggedElement;
 // Настроечные переменные ======================================================
 
 // вспомогательные функции======================================================
@@ -48,7 +53,137 @@ function compareAge(personA, personB) {
     friendB = Date.parse(friendB);
     return friendB - friendA;       // здесь можно поменять порядок сортировки, поменяв слагаемые
 } // compareAge
+
+/**
+ * generateFriendsToDom генерация друзей из массива в DOM
+ * @param  {DOM element} sourceDOMElement - родительский DOM элемиент в который будет вставляться сгенеренный Handlebars темплейт
+ * @param  {DOM element} handlebarsDOMTemplate - Handlebars темплейт который будет вставляться в DOM на странице
+ * @param  {array} dataArray - массив с объектами (вставляются друзья из VK, поля связаны с Handlebars темплейтом)
+ * @return {boolean} or {Throw New Error} выбрасываем ошибку, если входные параметры пустые, если все ок то возвращаем true
+ */
+function generateFriendsToDom( sourceDOMElement, handlebarsDOMTemplate, dataArray ) {
+    if ( arguments.length === 0 || !dataArray ) {
+        throw new Error('DATA_EMPTY');
+    }
+    let source = handlebarsDOMTemplate.innerHTML;
+    let templateFn = Handlebars.compile(source);
+    let template = templateFn({ friendslist: dataArray });
+    sourceDOMElement.innerHTML = template;
+    return true;
+} //generateFriendsToDom
+
+// находит друзей в массиве и затем оставляет их в массиве на выходе
+function searchFriend(textInput, sourceArray){
+    let result = [];
+    for(let friend of sourceArray){
+        if (
+            ~friend.first_name.toLowerCase().indexOf(textInput.toLowerCase())
+            ||
+            ~friend.last_name.toLowerCase().indexOf(textInput.toLowerCase())
+        ) {
+            result.push(friend);
+        }
+    }
+    return result;
+} //searchFriend
+
+/**
+* Ищет нужный класс для выбранного таргета
+* @param  { DOMTokenList collection of the class attributes} classList коллекция всех классов элемента
+* @param  {string} findedClass искомый класс
+* @return {boolean}             если класс найден то true иначе false
+*/
+function findNeedClassName(classList, findedClass) {
+    if ( classList.length !== 0 ) {
+        for (let i=0; i < classList.length; i++ ) {
+            if (classList[i] === findedClass ) {
+                return true;
+            }
+        }
+    }
+    return false;
+} //findNeedClassName
 // вспомогательные функции======================================================
+
+// Обработчики событий =========================================================
+// функция живого поиска друзей на странице
+function liveFriendsSearch( e, searchString, sourceDOMElement, handlebarsDOMTemplate ) {
+    if ( searchString === '' || !searchString ) {
+        tempArrOfFriendsObjLeft = [].concat(grandArrOfFriendsObj);
+        generateFriendsToDom( sourceDOMElement, handlebarsDOMTemplate, tempArrOfFriendsObjLeft );
+        return;
+    }
+    tempArrOfFriendsObjLeft = searchFriend(searchString, tempArrOfFriendsObjLeft);
+    generateFriendsToDom( sourceDOMElement, handlebarsDOMTemplate, tempArrOfFriendsObjLeft );
+} // liveFriendsSearch
+
+// начало перетаскивания карточки друга
+function handleDragStart(e) {
+    let element = e.target;
+    let needClassName = false;
+    needClassName = findNeedClassName(element.classList, 'friend_block__design');
+    if ( needClassName && element.tagName === 'DIV' ) {
+        draggedElement = element;
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/html', draggedElement.innerHTML);
+    }
+    return true;
+} // handleDragStart
+
+// перетаскиваемый элемент достигает конечного элемента
+function handleDragEnter(e) {
+    e.preventDefault();
+    return true;
+} // handleDragEnter
+
+// разрешение на сброс элемента только в отпредеоенный DOM элемент на странице'
+function handleDragOver(e) {
+    let element = e.target;
+    let needClassName = false;
+    needClassName = findNeedClassName(element.classList, 'friends__block_drop');
+    if ( needClassName && element.tagName === 'DIV' ) {
+        e.preventDefault();
+    }
+} // handleDragOver
+
+// бросание элемента в конкретный DOM элемент
+function handleDrop(e) {
+    let element = e.target;
+    let needClassName = false;
+    e.preventDefault();
+    if (e.stopPropagation) {
+        e.stopPropagation(); // Stops some browsers from redirecting.
+    }
+    needClassName = findNeedClassName(element.classList, 'friends__block_drop');
+    if ( needClassName && element.tagName === 'DIV' ) {
+        draggedElement.parentNode.removeChild( draggedElement );
+        element.appendChild( draggedElement );
+
+        let arrayOfLinks = draggedElement.getElementsByTagName('a');
+        let movedFriendId = '';
+
+        for (let i=0; i<arrayOfLinks.length; i++) {
+            if ( arrayOfLinks[i].className === 'friend__id_link' ) {
+                movedFriendId = arrayOfLinks[i].innerText.trim();
+            }
+        }
+
+        // IDEA в handlebars шаблоне в дата атрибут загонять VK user_id а потом по нему искать, например вдруг из отображения id нужно скрыть
+        for (let i=0; i<tempArrOfFriendsObjLeft.length; i++) {
+            if (tempArrOfFriendsObjLeft[i].id === +movedFriendId) {
+                console.log('tempArrOfFriendsObjLeft[i].id',tempArrOfFriendsObjLeft[i].id);
+                let arrayMovedFriendCard = tempArrOfFriendsObjLeft.splice(i, 1);
+                tempArrOfFriendsObjRight = tempArrOfFriendsObjRight.concat(arrayMovedFriendCard);
+            }
+        }
+
+        console.log('LEFT',tempArrOfFriendsObjLeft);
+        console.log('RIGHT',tempArrOfFriendsObjRight);
+    }
+    return false;
+} // handleDrop
+
+// Обработчики событий =========================================================
 
 // запрос друзей из VK =========================================================
 new Promise(function(resolve) {
@@ -106,7 +241,7 @@ new Promise(function(resolve) {
                 VK.api(
                     'users.get',
                     {
-                        v: '5.8',
+                        v: VK_API_VERSION,
                         user_ids: serverAnswer.response.items,
                         fields: 'bdate,photo_50,friend_status'
                     },
@@ -114,24 +249,22 @@ new Promise(function(resolve) {
                         if (serverAnswer.error) {
                             reject(new Error(serverAnswer.error.error_msg));
                         } else {
-                            console.log('serverAnswer.response = ', serverAnswer.response);
-                            // в промежуточный массив брать только тех кто указал дату рождения полностью
-                            let tempArrOfFriendsObj = [];
                             for (let i = 0; i < serverAnswer.response.length; i++) {
                                 if ( serverAnswer.response[i].bdate && typeof serverAnswer.response[i].bdate !== 'undefined' ) {
                                     if (serverAnswer.response[i].bdate.match(/\.\d{4}/i)) {
-                                        let tempLength = tempArrOfFriendsObj.length;
-                                        tempArrOfFriendsObj[tempLength] = serverAnswer.response[i];
+                                        let tempLength = grandArrOfFriendsObj.length;
+                                        grandArrOfFriendsObj[tempLength] = serverAnswer.response[i];
+                                        // tempArrOfFriendsObjLeft[tempLength] = serverAnswer.response[i];
                                     }
                                 }
                             }
+                            tempArrOfFriendsObjLeft = [].concat(grandArrOfFriendsObj);
                             // вызов функции сортировки по возрасту
-                            tempArrOfFriendsObj.sort(compareAge);
+                            grandArrOfFriendsObj.sort(compareAge);
                             // вывод данных о друзьях в DOM
-                            let source = allRenderedFriends.innerHTML;
-                            let templateFn = Handlebars.compile(source);
-                            let template = templateFn({ friendslist: tempArrOfFriendsObj });
-                            listOfDownloadedFriends.innerHTML = template;
+                            generateFriendsToDom( listOfDownloadedFriends, allRenderedFriends, grandArrOfFriendsObj );
+                            // высота правого блока такая же как и у левого
+                            listOfMovedFriends.style.height=listOfDownloadedFriends.offsetHeight+"px"
                             resolve();
                         }
                 });
@@ -146,6 +279,28 @@ new Promise(function(resolve) {
 
 
 
+// события на DOM элементах ====================================================
+// событие ввода текста для input Search Left
+searchInputLeft.addEventListener(
+    'input',
+    (e) => {
+        liveFriendsSearch(e, searchInputLeft.value, listOfDownloadedFriends, allRenderedFriends );
+    }
+);
+// событие ввода текста для input Search Right
+searchInputRight.addEventListener(
+    'input',
+    (e) => {
+        liveFriendsSearch(e, searchInputRight.value, listOfDownloadedFriends, allRenderedFriends );
+    }
+);
+// события для отработки Drag and Drop
+listOfDownloadedFriends.addEventListener('dragstart', handleDragStart);
+document.addEventListener('drop', handleDrop);
+listOfDownloadedFriends.addEventListener('dragenter', handleDragEnter);
+document.addEventListener('dragover', handleDragOver);
+// ====
+// события на DOM элементах ====================================================
 
 
 //

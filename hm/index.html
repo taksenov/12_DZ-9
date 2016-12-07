@@ -45,7 +45,7 @@
                         <div class="input-group-addon">
                             <i class="fa fa-search" aria-hidden="true"></i>
                         </div>
-                        <input type="text" class="form-control" id="inputOfDownloadedFriends" placeholder="Fiends search">
+                        <input type="text" class="form-control" id="searchInputLeft" placeholder="Fiends search">
                     </div>
 
                     <div class="text-center">
@@ -62,13 +62,13 @@
                 <!-- left side -->
 
                 <!-- right side -->
-                <div class="col-md-5">
+                <div class="col-md-5 col-md-offset-1">
 
                     <div class="input-group">
                         <div class="input-group-addon">
                             <i class="fa fa-search" aria-hidden="true"></i>
                         </div>
-                        <input type="text" class="form-control" id="inputOfDownloadedFriends" placeholder="Fiends search">
+                        <input type="text" class="form-control" id="searchInputRight" placeholder="Fiends search">
                     </div>
 
                     <div class="text-center">
@@ -78,7 +78,7 @@
                     </div>
 
                     <!-- Moved friends add here -->
-                    <div class="friends__block_generated" id="listOfMovedFriends" >
+                    <div class="friends__block_generated friends__block_drop" id="listOfMovedFriends" >
 
                     </div>
                 </div>
@@ -91,7 +91,7 @@
     <!-- HandlebarsJS Template -->
     <script type="text/x-handlebars-template" id="allRenderedFriends">
         {{#each friendslist}}
-            <div class="row friend_block__design">
+            <div class="row friend_block__design" draggable="true">
                 <div class="col-md-2">
                     <img src="{{photo_50}}" alt="{{last_name}} {{first_name}}">
                 </div>
@@ -105,7 +105,7 @@
                     </span>
                     <br>
                     <span class="friend__id">
-                        id: <a href="https://vk.com/id{{id}}">{{id}}</a>
+                        id: <a href="https://vk.com/id{{id}}" class="friend__id_link">{{id}}</a>
                     </span>
                 </div>
                 <div class="col-md-1 icon__parent">
@@ -114,7 +114,7 @@
             </div>
         {{/each}}
     </script>
-    <!-- HandlebarsJS Template -->    
+    <!-- HandlebarsJS Template -->
 
     <script type"text/javascript" src="https://vk.com/js/api/openapi.js"></script>
     <!-- HandlebarsJS -->
