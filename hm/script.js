@@ -10,12 +10,15 @@
 //
 // - реализовать сохранение и загрузку данных о пользователях и где они лежат
 // записывая все в локалСторадж
-// - нужна функция(и), которая восстанавливает по левому и правому массивам DOM
-// дерево
-// - IDEA возможно нужны еще пара промежуточных массивов, по которым будет
-// происходить живой  поиск
-//   учитывать уже эти массивы, когда нажаты кнопки сохранить, загрузить, на
-//   основе ни собирать DOM дерево (но это не точно!)
+//
+// - XXX нужна функция(и), которая восстанавливает по левому и правому массивам DOM
+// дерево УЖЕ ЕСТЬ называется generateFriendsToDom
+//
+//
+//
+// - НЕТ ВСЕ НАХ!!!! ЧТО ЗА ЕРЕСЬ! ДЕРЖАТЬ В ЛОКАЛ СТОРАДЖЕ ТОЛЬКО ВСЕХ ПОЛЬЗОВАТЕЛЕЙ
+// ИЗ ГРАНД_МАССИВОВ массивы отобранных пользователей не учитывать при сохранении
+// в локалСторадж
 //
 // Использование шаблонизатора приветствуется.
 // =============================================================================
@@ -41,8 +44,10 @@ let allRenderedFriends = document.getElementById('allRenderedFriends');
 let VK_ACCESS_FRIENDS = 2;
 let VK_API_VERSION = '5.8';
 let grandArrOfFriendsObj = [];          // главный массив Друзей из ВК
-let tempArrOfFriendsObjLeft = [];          // массив всех Друзей
-let tempArrOfFriendsObjRight = [];         // массив выбранных друзей
+let tempArrOfFriendsObjLeft = [];                // массив всех Друзей -- слева
+let tempSearchArrOfFriendsObjLeft = [];          // массив всех НАЙДЕННЫХ Друзей -- слева
+let tempArrOfFriendsObjRight = [];               // массив выбранных друзей -- справа
+let tempSearchArrOfFriendsObjRight = [];         // массив выбранных НАЙДЕННЫХ друзей -- справа
 let searchInputLeft = document.getElementById('searchInputLeft');
 let searchInputRight = document.getElementById('searchInputRight');
 let btnSaveFriendsSet = document.getElementById('btnSaveFriendsSet');       // кнопка сохранить друзей в локал сторадж
@@ -112,15 +117,27 @@ function findNeedClassName(classList, findedClass) {
 // вспомогательные функции======================================================
 
 // Обработчики событий =========================================================
-// функция живого поиска друзей на странице
-function liveFriendsSearch( e, searchString, sourceDOMElement, handlebarsDOMTemplate ) {
+/**
+ * функция живого поиска друзей на странице
+ * @param  {[type]} e                     [description]
+ * @param  {[type]} searchString          строка поиска
+ * @param  {[type]} sourceDOMElement      дом элемент в котором происходит поиск и отображение результатов
+ * @param  {[type]} handlebarsDOMTemplate handlebars шаблон который строится внутри sourceDOMElement
+ * @param  {[type]} arraySearch           массив найденных друзей
+ * @param  {[type]} arrayGrand            первоначальный массив по которому ведется поиск
+ * @return {[type]}                       возвращается массив найденных друзей
+ */
+function liveFriendsSearch( e, searchString, sourceDOMElement, handlebarsDOMTemplate, arraySearch, arrayGrand ) {
     if ( searchString === '' || !searchString ) {
-        tempArrOfFriendsObjLeft = [].concat(grandArrOfFriendsObj);
-        generateFriendsToDom( sourceDOMElement, handlebarsDOMTemplate, tempArrOfFriendsObjLeft );
-        return;
+        arraySearch = [].concat(arrayGrand);
+        arraySearch.sort(compareAge);
+        generateFriendsToDom( sourceDOMElement, handlebarsDOMTemplate, arraySearch );
+        return arraySearch;
     }
-    tempArrOfFriendsObjLeft = searchFriend(searchString, tempArrOfFriendsObjLeft);
-    generateFriendsToDom( sourceDOMElement, handlebarsDOMTemplate, tempArrOfFriendsObjLeft );
+    arraySearch = searchFriend(searchString, arrayGrand);
+    arraySearch.sort(compareAge);
+    generateFriendsToDom( sourceDOMElement, handlebarsDOMTemplate, arraySearch );
+    return arraySearch;
 } // liveFriendsSearch
 
 // начало перетаскивания карточки друга
@@ -177,21 +194,22 @@ function handleDrop(e) {
         // IDEA в handlebars шаблоне в дата атрибут загонять VK user_id а потом по нему искать, например вдруг из отображения id нужно скрыть
         for (let i=0; i<tempArrOfFriendsObjLeft.length; i++) {
             if (tempArrOfFriendsObjLeft[i].id === +movedFriendId) {
-                console.log('tempArrOfFriendsObjLeft[i].id',tempArrOfFriendsObjLeft[i].id);
+                // console.log('tempArrOfFriendsObjLeft[i].id',tempArrOfFriendsObjLeft[i].id);
                 let arrayMovedFriendCard = tempArrOfFriendsObjLeft.splice(i, 1);
                 tempArrOfFriendsObjRight = tempArrOfFriendsObjRight.concat(arrayMovedFriendCard);
             }
         }
 
-        console.log('LEFT',tempArrOfFriendsObjLeft);
-        console.log('RIGHT',tempArrOfFriendsObjRight);
+        // console.log('LEFT',tempArrOfFriendsObjLeft);
+        // console.log('RIGHT',tempArrOfFriendsObjRight);
     }
     return false;
 } // handleDrop
 
 // сохранение данных о друзьях в localStorage
 function handleSaveFriendsToStorage(e) {
-
+    // TODO сюда зафигачить сохрание в локал сторадж! см
+    console.log('tempSearchArrOfFriendsObjRight', tempSearchArrOfFriendsObjRight);
 } // handleSaveFriendsToStorage
 // Обработчики событий =========================================================
 
@@ -294,14 +312,14 @@ new Promise(function(resolve) {
 searchInputLeft.addEventListener(
     'input',
     (e) => {
-        liveFriendsSearch(e, searchInputLeft.value, listOfDownloadedFriends, allRenderedFriends );
+        tempSearchArrOfFriendsObjLeft = liveFriendsSearch(e, searchInputLeft.value, listOfDownloadedFriends, allRenderedFriends, tempSearchArrOfFriendsObjLeft, tempArrOfFriendsObjLeft );
     }
 );
 // событие ввода текста для input Search Right
 searchInputRight.addEventListener(
     'input',
     (e) => {
-        liveFriendsSearch(e, searchInputRight.value, listOfMovedFriends, allRenderedFriends );
+        tempSearchArrOfFriendsObjRight = liveFriendsSearch(e, searchInputRight.value, listOfMovedFriends, allRenderedFriends, tempSearchArrOfFriendsObjRight, tempArrOfFriendsObjRight );
     }
 );
 // события для отработки Drag and Drop
@@ -310,6 +328,7 @@ document.addEventListener('drop', handleDrop);
 listOfDownloadedFriends.addEventListener('dragenter', handleDragEnter);
 document.addEventListener('dragover', handleDragOver);
 // ====
+
 btnSaveFriendsSet.addEventListener(
     'click',
     (e) => {
