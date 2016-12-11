@@ -45,7 +45,8 @@ let tempArrOfFriendsObjLeft = [];          // массив всех Друзей
 let tempArrOfFriendsObjRight = [];         // массив выбранных друзей
 let searchInputLeft = document.getElementById('searchInputLeft');
 let searchInputRight = document.getElementById('searchInputRight');
-let dragSrcEl = null;
+let btnSaveFriendsSet = document.getElementById('btnSaveFriendsSet');       // кнопка сохранить друзей в локал сторадж
+// let dragSrcEl = null;
 let draggedElement;
 // Настроечные переменные ======================================================
 
@@ -190,7 +191,7 @@ function handleDrop(e) {
 
 // сохранение данных о друзьях в localStorage
 function handleSaveFriendsToStorage(e) {
-    
+
 } // handleSaveFriendsToStorage
 // Обработчики событий =========================================================
 
@@ -300,7 +301,7 @@ searchInputLeft.addEventListener(
 searchInputRight.addEventListener(
     'input',
     (e) => {
-        liveFriendsSearch(e, searchInputRight.value, listOfDownloadedFriends, allRenderedFriends );
+        liveFriendsSearch(e, searchInputRight.value, listOfMovedFriends, allRenderedFriends );
     }
 );
 // события для отработки Drag and Drop
@@ -309,6 +310,12 @@ document.addEventListener('drop', handleDrop);
 listOfDownloadedFriends.addEventListener('dragenter', handleDragEnter);
 document.addEventListener('dragover', handleDragOver);
 // ====
+btnSaveFriendsSet.addEventListener(
+    'click',
+    (e) => {
+        handleSaveFriendsToStorage(e);
+    }
+);
 // события на DOM элементах ====================================================
 
 
