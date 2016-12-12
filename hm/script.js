@@ -1,25 +1,7 @@
 // ДЗ 1: Описание задания доступно по данной прямой ссылке:
 // https://youtu.be/L4Jq9_H6bgE
-
-// TODO
 // - Друзья должны быть отсортированы по дате рождения в порядке убывания.
 // То есть на самом верху списка расположен друг с ближайший датой рождения.
-//
-// - реализовать возврат обратно в ЛЕВЫЙ список из ПРАВОГО, сделать смену иконки
-//  на крестик!
-//
-// - реализовать сохранение и загрузку данных о пользователях и где они лежат
-// записывая все в локалСторадж
-//
-// - XXX нужна функция(и), которая восстанавливает по левому и правому массивам DOM
-// дерево УЖЕ ЕСТЬ называется generateFriendsToDom
-//
-//
-//
-// - НЕТ ВСЕ НАХ!!!! ЧТО ЗА ЕРЕСЬ! ДЕРЖАТЬ В ЛОКАЛ СТОРАДЖЕ ТОЛЬКО ВСЕХ ПОЛЬЗОВАТЕЛЕЙ
-// ИЗ ГРАНД_МАССИВОВ массивы отобранных пользователей не учитывать при сохранении
-// в локалСторадж
-//
 // Использование шаблонизатора приветствуется.
 // =============================================================================
 
@@ -35,27 +17,70 @@
 // 3) http://localhost:7777/
 // =============================================================================
 
+'use strict';
+
 // Настроечные переменные ======================================================
 let vkAppId = 5757533;
 let headerUserFriendsVK = document.getElementById('headerUserFriendsVK');
-let listOfDownloadedFriends = document.getElementById('listOfDownloadedFriends');
-let listOfMovedFriends = document.getElementById('listOfMovedFriends');
-let allRenderedFriends = document.getElementById('allRenderedFriends');
+let listOfDownloadedFriends = document.getElementById('listOfDownloadedFriends'); // Левая сторона в DOM дереве
+let listOfMovedFriends = document.getElementById('listOfMovedFriends');         // Правая сторона в DOM дереве
+let allRenderedFriends = document.getElementById('allRenderedFriends');         // handlebars шаблон
 let VK_ACCESS_FRIENDS = 2;
 let VK_API_VERSION = '5.8';
-let grandArrOfFriendsObj = [];          // главный массив Друзей из ВК
+let grandArrOfFriendsObj = [];                   // главный массив Друзей из ВК
 let tempArrOfFriendsObjLeft = [];                // массив всех Друзей -- слева
-let tempSearchArrOfFriendsObjLeft = [];          // массив всех НАЙДЕННЫХ Друзей -- слева
+let tempSearchArrOfFriendsObjLeft = [];          // массив всех НАЙДЕННЫХ Друзей -- слева -- нужны для променжуточного живого поиска
 let tempArrOfFriendsObjRight = [];               // массив выбранных друзей -- справа
-let tempSearchArrOfFriendsObjRight = [];         // массив выбранных НАЙДЕННЫХ друзей -- справа
+let tempSearchArrOfFriendsObjRight = [];         // массив выбранных НАЙДЕННЫХ друзей -- справа -- нужны для променжуточного живого поиска
 let searchInputLeft = document.getElementById('searchInputLeft');
 let searchInputRight = document.getElementById('searchInputRight');
 let btnSaveFriendsSet = document.getElementById('btnSaveFriendsSet');       // кнопка сохранить друзей в локал сторадж
-// let dragSrcEl = null;
+let btnLoadFriendsSet = document.getElementById('btnLoadFriendsSet');       // кнопка загрузки друзей из локал сторадж
+let myStorage = localStorage;
 let draggedElement;
 // Настроечные переменные ======================================================
 
 // вспомогательные функции======================================================
+
+/**
+ * функция перемешения карточки
+ * @param  {array}  arrLinks           массив ссылок из дом дерева (IDEA заменить на дата компонент)
+ * @param  {string} findedClass        поиск класса где лежит ID в DOM дереве
+ * @param  {array}  arrayOfFriendsOut  массив откуда перемещаем карточку
+ * @param  {array}  arrayOfFriendsIn   массив куда перемещаем карточку
+ * @param  {boolean} moveDirection      направление перемещения
+ * @return {array}   arrayOfFriendsIn   arrayOfFriendsIn
+ */
+function cardMove(arrLinks, findedClass, arrayOfFriendsOut, arrayOfFriendsIn, moveDirection) {
+    let movedFriendId = '';
+    for (let i=0; i<arrLinks.length; i++) {
+        if ( arrLinks[i].className === findedClass ) {
+            movedFriendId = arrLinks[i].innerText.trim();
+        }
+    }
+    for (let i=0; i<arrayOfFriendsOut.length; i++) {
+        if (arrayOfFriendsOut[i].id === +movedFriendId) {
+            // свойство leftSide = moveDirection
+            arrayOfFriendsOut[i].leftSide = moveDirection;
+            let arrayMovedFriendCard = arrayOfFriendsOut.splice(i, 1);
+            arrayOfFriendsIn = arrayOfFriendsIn.concat(arrayMovedFriendCard);
+        }
+    }
+    return arrayOfFriendsIn;
+} // cardMove
+
+// полифил для closest
+(function(e){
+    e.closest = e.closest || function(css){
+        var node = this;
+        while (node) {
+            if (node.matches(css)) return node;
+            else node = node.parentElement;
+        }
+        return null;
+    }
+})(Element.prototype);
+
 // функция сравнения возраста
 function compareAge(personA, personB) {
     let friendA = new Date(personA.bdate.replace(/(\d+)\.(\d+)\.(\d+)/, '$2/$1/$3'));
@@ -117,6 +142,7 @@ function findNeedClassName(classList, findedClass) {
 // вспомогательные функции======================================================
 
 // Обработчики событий =========================================================
+
 /**
  * функция живого поиска друзей на странице
  * @param  {[type]} e                     [description]
@@ -185,32 +211,75 @@ function handleDrop(e) {
         let arrayOfLinks = draggedElement.getElementsByTagName('a');
         let movedFriendId = '';
 
-        for (let i=0; i<arrayOfLinks.length; i++) {
-            if ( arrayOfLinks[i].className === 'friend__id_link' ) {
-                movedFriendId = arrayOfLinks[i].innerText.trim();
-            }
-        }
-
-        // IDEA в handlebars шаблоне в дата атрибут загонять VK user_id а потом по нему искать, например вдруг из отображения id нужно скрыть
-        for (let i=0; i<tempArrOfFriendsObjLeft.length; i++) {
-            if (tempArrOfFriendsObjLeft[i].id === +movedFriendId) {
-                // console.log('tempArrOfFriendsObjLeft[i].id',tempArrOfFriendsObjLeft[i].id);
-                let arrayMovedFriendCard = tempArrOfFriendsObjLeft.splice(i, 1);
-                tempArrOfFriendsObjRight = tempArrOfFriendsObjRight.concat(arrayMovedFriendCard);
-            }
-        }
-
-        // console.log('LEFT',tempArrOfFriendsObjLeft);
-        // console.log('RIGHT',tempArrOfFriendsObjRight);
+        tempArrOfFriendsObjRight = cardMove(arrayOfLinks, 'friend__id_link', tempArrOfFriendsObjLeft, tempArrOfFriendsObjRight, false)
+        // перестроить список пользователей в стороне куда перемещается карточка
+        generateFriendsToDom( listOfMovedFriends, allRenderedFriends, tempArrOfFriendsObjRight );
     }
     return false;
 } // handleDrop
 
 // сохранение данных о друзьях в localStorage
 function handleSaveFriendsToStorage(e) {
-    // TODO сюда зафигачить сохрание в локал сторадж! см
-    console.log('tempSearchArrOfFriendsObjRight', tempSearchArrOfFriendsObjRight);
+    myStorage.listOfFriendsLeft = JSON.stringify(tempArrOfFriendsObjLeft);
+    myStorage.listOfFriendsRight = JSON.stringify(tempArrOfFriendsObjRight);
 } // handleSaveFriendsToStorage
+
+// загрузка данных о друзьях из localStorage и генерация на основе этих данных DOM
+function handleLoadFriendsFromStorage(e) {
+    tempArrOfFriendsObjLeft = JSON.parse(myStorage.listOfFriendsLeft);
+    tempArrOfFriendsObjRight = JSON.parse(myStorage.listOfFriendsRight);
+    // левый массив
+    tempArrOfFriendsObjLeft.sort(compareAge);
+    generateFriendsToDom( listOfDownloadedFriends, allRenderedFriends, tempArrOfFriendsObjLeft );
+    // правый массив
+    tempArrOfFriendsObjRight.sort(compareAge);
+    generateFriendsToDom( listOfMovedFriends, allRenderedFriends, tempArrOfFriendsObjRight );
+
+} // handleSaveFriendsToStorage
+
+// перемеш=щение карточки вправо без drag-n-drop
+function handleMoveToRight(e) {
+    let element = e.target;
+    let needClassName1 = false;
+    let needClassName2 = false;
+    needClassName1 = findNeedClassName(element.classList, 'fa-plus');
+    needClassName2 = findNeedClassName(element.classList, 'icon__child');
+    if ( needClassName1 && needClassName2 && element.tagName === 'I' ) {
+
+        let movedDOMBlock = element.closest('.friend_block__design');
+        let arrayOfLinks = movedDOMBlock.getElementsByTagName('a');
+        let movedFriendId = '';
+
+        movedDOMBlock.parentNode.removeChild( movedDOMBlock );
+
+        tempArrOfFriendsObjRight = cardMove(arrayOfLinks, 'friend__id_link', tempArrOfFriendsObjLeft, tempArrOfFriendsObjRight, false)
+        // перестроить список пользователей в стороне куда перемещается карточка
+        generateFriendsToDom( listOfMovedFriends, allRenderedFriends, tempArrOfFriendsObjRight );
+
+    }
+} // handleMoveToRight
+
+// перемеш=щение карточки вправо без drag-n-drop
+function handleMoveToLeft(e) {
+    let element = e.target;
+    let needClassName1 = false;
+    let needClassName2 = false;
+    needClassName1 = findNeedClassName(element.classList, 'fa-times');
+    needClassName2 = findNeedClassName(element.classList, 'icon__child');
+    if ( needClassName1 && needClassName2 && element.tagName === 'I' ) {
+
+        let movedDOMBlock = element.closest('.friend_block__design');
+        let arrayOfLinks = movedDOMBlock.getElementsByTagName('a');
+        let movedFriendId = '';
+
+        movedDOMBlock.parentNode.removeChild( movedDOMBlock );
+
+        tempArrOfFriendsObjLeft = cardMove(arrayOfLinks, 'friend__id_link',tempArrOfFriendsObjRight, tempArrOfFriendsObjLeft, true)
+        // перестроить список пользователей в стороне куда перемещается карточка
+        generateFriendsToDom( listOfDownloadedFriends, allRenderedFriends, tempArrOfFriendsObjLeft );
+
+    }
+} // handleMoveToLeft
 // Обработчики событий =========================================================
 
 // запрос друзей из VK =========================================================
@@ -253,7 +322,7 @@ new Promise(function(resolve) {
     // получение id всех друзей пользователя
     .then(function() {
         return new Promise(function(resolve, reject) {
-            VK.api('friends.get', {v: '5.8'}, function(serverAnswer) {
+            VK.api('friends.get', {v: VK_API_VERSION}, function(serverAnswer) {
                 if (serverAnswer.error) {
                     reject(new Error(serverAnswer.error.error_msg));
                 } else {
@@ -282,7 +351,8 @@ new Promise(function(resolve) {
                                     if (serverAnswer.response[i].bdate.match(/\.\d{4}/i)) {
                                         let tempLength = grandArrOfFriendsObj.length;
                                         grandArrOfFriendsObj[tempLength] = serverAnswer.response[i];
-                                        // tempArrOfFriendsObjLeft[tempLength] = serverAnswer.response[i];
+                                        // установить всем пользователям свойство leftSide=true когда они загружены впервые в левую часть!
+                                        grandArrOfFriendsObj[tempLength].leftSide = true;
                                     }
                                 }
                             }
@@ -304,22 +374,31 @@ new Promise(function(resolve) {
     });
 // запрос друзей из VK =========================================================
 
-
-
-
 // события на DOM элементах ====================================================
 // событие ввода текста для input Search Left
 searchInputLeft.addEventListener(
     'input',
     (e) => {
-        tempSearchArrOfFriendsObjLeft = liveFriendsSearch(e, searchInputLeft.value, listOfDownloadedFriends, allRenderedFriends, tempSearchArrOfFriendsObjLeft, tempArrOfFriendsObjLeft );
+        tempSearchArrOfFriendsObjLeft = liveFriendsSearch(e,
+            searchInputLeft.value,
+            listOfDownloadedFriends,
+            allRenderedFriends,
+            tempSearchArrOfFriendsObjLeft,
+            tempArrOfFriendsObjLeft
+        );
     }
 );
 // событие ввода текста для input Search Right
 searchInputRight.addEventListener(
     'input',
     (e) => {
-        tempSearchArrOfFriendsObjRight = liveFriendsSearch(e, searchInputRight.value, listOfMovedFriends, allRenderedFriends, tempSearchArrOfFriendsObjRight, tempArrOfFriendsObjRight );
+        tempSearchArrOfFriendsObjRight = liveFriendsSearch(e,
+            searchInputRight.value,
+            listOfMovedFriends,
+            allRenderedFriends,
+            tempSearchArrOfFriendsObjRight,
+            tempArrOfFriendsObjRight
+        );
     }
 );
 // события для отработки Drag and Drop
@@ -327,15 +406,14 @@ listOfDownloadedFriends.addEventListener('dragstart', handleDragStart);
 document.addEventListener('drop', handleDrop);
 listOfDownloadedFriends.addEventListener('dragenter', handleDragEnter);
 document.addEventListener('dragover', handleDragOver);
-// ====
-
-btnSaveFriendsSet.addEventListener(
-    'click',
-    (e) => {
-        handleSaveFriendsToStorage(e);
-    }
-);
+// события клика по кнопкам СОХРАНИТЬ и ЗАГРУЗИТЬ
+btnSaveFriendsSet.addEventListener('click',(e) => {handleSaveFriendsToStorage(e);});
+btnLoadFriendsSet.addEventListener('click',(e) => {handleLoadFriendsFromStorage(e);});
+// событие клик на кнопке +(перемещение слева-на-право)
+listOfDownloadedFriends.addEventListener('click', (e) => {handleMoveToRight(e);});
+// событие клик на кнопке "крестик"(перемещение справа-на-лево) в левой и правых стронах
+listOfMovedFriends.addEventListener('click', (e) => {handleMoveToLeft(e);});
 // события на DOM элементах ====================================================
 
 
-//
+// END

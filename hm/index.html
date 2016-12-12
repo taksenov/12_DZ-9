@@ -24,7 +24,7 @@
                     <!-- header content insert here -->
                 </h1>
             </div>
-            <div class="col-md-12 text-center header__btns"> 
+            <div class="col-md-12 text-center header__btns">
 
                 <button type="button" class="btn btn-success" id="btnSaveFriendsSet">Сохранить</button>
                 <button type="button" class="btn btn-info" id="btnLoadFriendsSet">Загрузить</button>
@@ -109,7 +109,11 @@
                     </span>
                 </div>
                 <div class="col-md-1 icon__parent">
-                    <i class="fa fa-plus icon__child" aria-hidden="true"></i>
+                    {{#if leftSide}}
+                        <i class="fa fa-plus icon__child" aria-hidden="true"></i>
+                    {{else}}
+                        <i class="fa fa-times icon__child" aria-hidden="true"></i>
+                    {{/if}}
                 </div>
             </div>
         {{/each}}
